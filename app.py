@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from werkzeug import secure_filename
 import os
 import sys
@@ -6,6 +6,7 @@ from PIL import Image
 import pytesseract
 import argparse
 import cv2
+import urllib2
 
 __author__ = 'Rick Torzynski <ricktorzynski@gmail.com>'
 __source__ = ''
@@ -56,6 +57,47 @@ def upload_file():
       os.remove(ofilename)
 
       return render_template("uploaded.html", displaytext=text, fname=filename)
+
+@app.route('/api', methods = ['GET', 'POST'])
+def send_json():
+   if request.method == 'POST':
+      # image url
+      url = request.json['img_url']
+
+      # download image
+      f = urllib2.urlopen(url)
+
+      # create a secure filename
+      filename = secure_filename(f.filename)
+
+      # save file to /static/uploads
+      filepath = os.path.join(app.config['UPLOAD_FOLDER'],filename)
+      f.save(filepath)
+      
+      # load the example image and convert it to grayscale
+      image = cv2.imread(filepath)
+      gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+      
+      # apply thresholding to preprocess the image
+      gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+
+      # apply median blurring to remove any blurring
+      gray = cv2.medianBlur(gray, 3)
+
+      # save the processed image in the /static/uploads directory
+      ofilename = os.path.join(app.config['UPLOAD_FOLDER'],"{}.png".format(os.getpid()))
+      cv2.imwrite(ofilename, gray)
+      
+      # perform OCR on the processed image
+      text = pytesseract.image_to_string(Image.open(ofilename))
+      
+      # remove the processed image
+      os.remove(ofilename)
+      
+      # create dictionary containing image url and result text
+      response = {"url" : url, "result": text}
+
+      return (jsonify(response))
 
 if __name__ == '__main__':
    app.run(host="0.0.0.0", port=5000, debug=True)
