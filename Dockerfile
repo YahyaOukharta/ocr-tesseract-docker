@@ -12,6 +12,7 @@ RUN python get-pip.py
 COPY . /app
 WORKDIR /app
 RUN pip install pillow
+RUN pip install numpy
 RUN pip install pytesseract
 RUN pip install opencv-contrib-python
 RUN pip install -r requirements.txt
