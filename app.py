@@ -58,11 +58,11 @@ def upload_file():
 
       return render_template("uploaded.html", displaytext=text, fname=filename)
 
-@app.route('/api', methods = ['GET', 'POST'])
+@app.route('/api', methods = ['POST'])
 def send_json():
    if request.method == 'POST':
       # image url
-      url = request.json['img_url']
+      url = request.form['img_url']
 
       # download image
       f = urllib2.urlopen(url)
